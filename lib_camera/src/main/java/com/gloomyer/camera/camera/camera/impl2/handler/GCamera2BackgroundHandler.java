@@ -11,7 +11,7 @@ import android.os.HandlerThread;
  */
 public class GCamera2BackgroundHandler {
     private static final String TAG = GCamera2BackgroundHandler.class.getSimpleName();
-    private final Handler mHandler;
+    private Handler mHandler;
 
     public GCamera2BackgroundHandler() {
         HandlerThread handlerThread = new HandlerThread(TAG);

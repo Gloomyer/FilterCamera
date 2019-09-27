@@ -81,17 +81,9 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
             error(-1, "surface == null", null);
             return;
         }
+        //如果没有初始化完成不执行
         if (isInitConfigComiple) {
-            //如果没有初始化完成不作数
-            GCamera2DeviceInfo device = devices.get(0);
-            for (GCamera2DeviceInfo d : devices) {
-                if (lensFacing == LENS_FACING.LENS_FACING_BACK) {
-                    if (d.isBack()) {
-                        device = d;
-                        break;
-                    }
-                }
-            }
+            GCamera2DeviceInfo device = getDevice(lensFacing);
             try {
                 mGCamera2OpenCallback = new GCamera2OpenCallback(camera -> {
                     mCameraDevice = camera;
@@ -108,6 +100,25 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         } else {
             error(-1, "初始化未完成!", null);
         }
+    }
+
+    /**
+     * 根据方向获取摄像头
+     *
+     * @param lensFacing 摄像头方向
+     * @return 摄像头设备
+     */
+    private GCamera2DeviceInfo getDevice(LENS_FACING lensFacing) {
+        GCamera2DeviceInfo device = devices.get(0);
+        for (GCamera2DeviceInfo d : devices) {
+            if (lensFacing == LENS_FACING.LENS_FACING_BACK) {
+                if (d.isBack()) {
+                    device = d;
+                    break;
+                }
+            }
+        }
+        return device;
     }
 
     @Override
@@ -155,6 +166,7 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         LG.e(TAG, "onDestroy");
         mReadConfigCompileCallback = null;
         mOnCameraErrorCallback = null;
+        mBackgroundHandler = null;
         if (mGCamera2OpenCallback != null)
             mGCamera2OpenCallback.onDestroy();
         mGCamera2OpenCallback = null;
@@ -203,7 +215,7 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
                         public void onConfigureFailed(@NonNull CameraCaptureSession session) {
 
                         }
-                    }, null);
+                    }, mBackgroundHandler.getHandler());
         } catch (Exception e) {
             e.printStackTrace();
             error(-1, "摄像头预览失败！", e);
