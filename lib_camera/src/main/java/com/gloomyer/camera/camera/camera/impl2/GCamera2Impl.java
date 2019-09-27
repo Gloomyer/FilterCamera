@@ -2,12 +2,14 @@ package com.gloomyer.camera.camera.camera.impl2;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.os.Build;
+import android.util.Size;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
@@ -48,10 +50,11 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
     private boolean isOpenCamera; //是否成功的打开了摄像头
     private CameraDevice mCameraDevice; //当前摄像头对象
 
-    private Surface surface;
+    private SurfaceTexture mSurfaceTexture;
     private List<GCamera2DeviceInfo> devices;
     private GCamera2OpenCallback mGCamera2OpenCallback;
     private GCamera2BackgroundHandler mBackgroundHandler;
+    private GCamera2DeviceInfo currentGCamera2DeviceInfo;
 
     public GCamera2Impl(@NonNull Context ctx, @NonNull LifecycleOwner owner) {
         this.mContext = ctx;
@@ -76,14 +79,17 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
 
     @SuppressLint("MissingPermission")
     @Override
-    public void open(LENS_FACING lensFacing) {
-        if (surface == null) {
+    public void open(LENS_FACING lensFacing, SurfaceTexture surface, int w, int h) {
+        this.mSurfaceTexture = surface;
+        if (mSurfaceTexture == null) {
             error(-1, "surface == null", null);
             return;
         }
         //如果没有初始化完成不执行
         if (isInitConfigComiple) {
-            GCamera2DeviceInfo device = getDevice(lensFacing);
+            currentGCamera2DeviceInfo = getDevice(lensFacing);
+            Size previewSize = currentGCamera2DeviceInfo.getOptimalSize(w, h);
+            mSurfaceTexture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
             try {
                 mGCamera2OpenCallback = new GCamera2OpenCallback(camera -> {
                     mCameraDevice = camera;
@@ -92,7 +98,7 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
                     }
                 });
                 mBackgroundHandler = new GCamera2BackgroundHandler();
-                mCameraManager.openCamera(device.getCameraId(), mGCamera2OpenCallback, mBackgroundHandler.getHandler());
+                mCameraManager.openCamera(currentGCamera2DeviceInfo.getCameraId(), mGCamera2OpenCallback, mBackgroundHandler.getHandler());
                 isOpenCamera = true;
             } catch (CameraAccessException e) {
                 error(-1, "摄像头打开异常!", e);
@@ -121,11 +127,6 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         return device;
     }
 
-    @Override
-    public void setSurface(Surface surface) {
-        this.surface = surface;
-    }
-
 
     /**
      * 读取摄像头配置
@@ -144,6 +145,12 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         }
     }
 
+    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+    void onPause(@NonNull LifecycleOwner owner) {
+        LG.e(TAG, "onPause");
+        if (mCameraDevice != null) {
+        }
+    }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
     void onCreate(@NonNull LifecycleOwner owner) {
@@ -186,6 +193,7 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         try {
             CaptureRequest.Builder mPreviewRequestBuilder =
                     mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            Surface surface = new Surface(mSurfaceTexture);
             mPreviewRequestBuilder.addTarget(surface);
             mCameraDevice.createCaptureSession(Arrays.asList(surface),
                     new CameraCaptureSession.StateCallback() {

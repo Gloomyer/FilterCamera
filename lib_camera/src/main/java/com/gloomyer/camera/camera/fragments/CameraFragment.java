@@ -2,9 +2,10 @@ package com.gloomyer.camera.camera.fragments;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.SurfaceView;
+import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -26,12 +27,14 @@ import com.tbruyelle.rxpermissions2.RxPermissions;
  * @Date 2019-09-27 13:22
  * @Created by gloomy
  */
-public class CameraFragment extends Fragment implements ReadConfigCompileCallback, OnCameraErrorCallback {
+public class CameraFragment extends Fragment implements ReadConfigCompileCallback, OnCameraErrorCallback, TextureView.SurfaceTextureListener {
 
     private static final String TAG = CameraFragment.class.getSimpleName();
     private View root;
-    private SurfaceView mSurfaceView;
+    private TextureView mTextureView;
     private GCameraApi mGCameraApi;
+    private int previewWidth;
+    private int previewHeight;
 
     @Nullable
     @Override
@@ -43,16 +46,18 @@ public class CameraFragment extends Fragment implements ReadConfigCompileCallbac
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mSurfaceView = root.findViewById(R.id.surface_view);
-        reqPermiss();
-
+        mTextureView = root.findViewById(R.id.texture_view);
+        mTextureView.setSurfaceTextureListener(this);
     }
 
     //请求权限
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @SuppressLint("CheckResult")
     private void reqPermiss() {
         new RxPermissions(this)
-                .requestEachCombined(Manifest.permission.CAMERA)
+                .requestEachCombined(
+                        Manifest.permission.CAMERA,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 .subscribe(permission -> {
                     if (permission.granted) {
                         //获取摄像头操作API
@@ -69,11 +74,8 @@ public class CameraFragment extends Fragment implements ReadConfigCompileCallbac
 
     @Override
     public void compile(GCameraApi cameraApi) {
-        mSurfaceView.post(()->{
-            cameraApi.setSurface(mSurfaceView.getHolder().getSurface());
-            cameraApi.open(GCameraApi.LENS_FACING.LENS_FACING_BACK);
-        });
-
+        cameraApi.open(GCameraApi.LENS_FACING.LENS_FACING_BACK,
+                mTextureView.getSurfaceTexture(), previewWidth, previewHeight);
     }
 
     @Override
@@ -82,5 +84,27 @@ public class CameraFragment extends Fragment implements ReadConfigCompileCallbac
         if (e != null) {
             LG.e(TAG, "Error:{0}", e.toString());
         }
+    }
+
+    @Override
+    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+        this.previewWidth = width;
+        this.previewHeight = height;
+        reqPermiss();
+    }
+
+    @Override
+    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+
+    }
+
+    @Override
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+        return false;
+    }
+
+    @Override
+    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+
     }
 }

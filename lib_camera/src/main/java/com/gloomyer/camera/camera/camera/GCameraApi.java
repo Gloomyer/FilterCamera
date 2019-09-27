@@ -1,7 +1,7 @@
 package com.gloomyer.camera.camera.camera;
 
 
-import android.view.Surface;
+import android.graphics.SurfaceTexture;
 
 import com.gloomyer.camera.camera.callback.OnCameraErrorCallback;
 import com.gloomyer.camera.camera.callback.ReadConfigCompileCallback;
@@ -42,14 +42,11 @@ public interface GCameraApi {
      * 打开摄像头
      *
      * @param lensFacing 要打开的摄像头方向
+     * @param surface    画布
+     * @param w          画布宽度
+     * @param h          画布高度
      */
-    void open(LENS_FACING lensFacing);
-
-    /**
-     * 设置摄像头预览画布
-     *
-     * @param surface 画布
-     */
-    void setSurface(Surface surface);
+    void open(LENS_FACING lensFacing,
+              SurfaceTexture surface, int w, int h);
 
 }
