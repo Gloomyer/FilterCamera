@@ -1,4 +1,4 @@
-package com.gloomyer.camera.camera.camera.impl;
+package com.gloomyer.camera.camera.camera.impl2;
 
 import android.annotation.SuppressLint;
 import android.graphics.SurfaceTexture;
@@ -10,7 +10,7 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 
-import com.gloomyer.camera.camera.camera.impl.info.GCamera2DeviceInfo;
+import com.gloomyer.camera.camera.camera.impl2.info.GCamera2DeviceInfo;
 
 import java.util.ArrayList;
 import java.util.List;

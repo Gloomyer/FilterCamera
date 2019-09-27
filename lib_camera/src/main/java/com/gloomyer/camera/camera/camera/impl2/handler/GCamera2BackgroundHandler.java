@@ -1,4 +1,4 @@
-package com.gloomyer.camera.camera.camera.impl.handler;
+package com.gloomyer.camera.camera.camera.impl2.handler;
 
 import android.os.Handler;
 import android.os.HandlerThread;

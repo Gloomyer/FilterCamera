@@ -1,4 +1,4 @@
-package com.gloomyer.camera.camera.camera.impl;
+package com.gloomyer.camera.camera.camera.impl2;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -8,7 +8,6 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.os.Build;
-import android.util.Size;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
@@ -20,9 +19,9 @@ import androidx.lifecycle.OnLifecycleEvent;
 import com.gloomyer.camera.camera.callback.OnCameraErrorCallback;
 import com.gloomyer.camera.camera.callback.ReadConfigCompileCallback;
 import com.gloomyer.camera.camera.camera.GCameraApi;
-import com.gloomyer.camera.camera.camera.impl.callback.GCamera2OpenCallback;
-import com.gloomyer.camera.camera.camera.impl.handler.GCamera2BackgroundHandler;
-import com.gloomyer.camera.camera.camera.impl.info.GCamera2DeviceInfo;
+import com.gloomyer.camera.camera.camera.impl2.callback.GCamera2OpenCallback;
+import com.gloomyer.camera.camera.camera.impl2.handler.GCamera2BackgroundHandler;
+import com.gloomyer.camera.camera.camera.impl2.info.GCamera2DeviceInfo;
 import com.gloomyer.camera.camera.utils.LG;
 
 import java.util.Arrays;

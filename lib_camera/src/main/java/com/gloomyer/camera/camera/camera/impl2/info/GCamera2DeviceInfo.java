@@ -1,4 +1,4 @@
-package com.gloomyer.camera.camera.camera.impl.info;
+package com.gloomyer.camera.camera.camera.impl2.info;
 
 import android.util.Range;
 import android.util.Size;

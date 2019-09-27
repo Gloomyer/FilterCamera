@@ -1,4 +1,4 @@
-package com.gloomyer.camera.camera.camera.impl.callback;
+package com.gloomyer.camera.camera.camera.impl2.callback;
 
 import android.annotation.SuppressLint;
 import android.hardware.camera2.CameraDevice;

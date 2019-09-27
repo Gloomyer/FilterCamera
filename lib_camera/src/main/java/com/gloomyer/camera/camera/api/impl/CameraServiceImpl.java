@@ -8,7 +8,7 @@ import androidx.fragment.app.FragmentTransaction;
 
 import com.gloomyer.camera.camera.api.GCameraService;
 import com.gloomyer.camera.camera.camera.GCameraApi;
-import com.gloomyer.camera.camera.camera.impl.GCamera2Impl;
+import com.gloomyer.camera.camera.camera.impl2.GCamera2Impl;
 import com.gloomyer.camera.camera.fragments.CameraFragment;
 
 import java.util.Objects;
