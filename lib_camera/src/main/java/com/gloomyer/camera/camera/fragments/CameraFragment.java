@@ -18,6 +18,7 @@ import com.gloomyer.camera.camera.R;
 import com.gloomyer.camera.camera.callback.OnCameraErrorCallback;
 import com.gloomyer.camera.camera.callback.ReadConfigCompileCallback;
 import com.gloomyer.camera.camera.camera.GCameraApi;
+import com.gloomyer.camera.camera.utils.ClickUtil;
 import com.gloomyer.camera.camera.utils.LG;
 import com.tbruyelle.rxpermissions2.RxPermissions;
 
@@ -48,6 +49,16 @@ public class CameraFragment extends Fragment implements ReadConfigCompileCallbac
         super.onActivityCreated(savedInstanceState);
         mTextureView = root.findViewById(R.id.texture_view);
         mTextureView.setSurfaceTextureListener(this);
+        ClickUtil.setClick(root.findViewById(R.id.iv_capture), this::capture);
+    }
+
+    /**
+     * 拍照
+     */
+    private void capture() {
+        if(mGCameraApi!=null){
+            mGCameraApi.capture();
+        }
     }
 
     //请求权限

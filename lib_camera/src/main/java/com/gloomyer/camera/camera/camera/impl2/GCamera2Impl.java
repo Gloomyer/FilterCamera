@@ -9,6 +9,7 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.os.Build;
+import android.os.Environment;
 import android.util.Size;
 import android.view.Surface;
 
@@ -21,12 +22,16 @@ import androidx.lifecycle.OnLifecycleEvent;
 import com.gloomyer.camera.camera.callback.OnCameraErrorCallback;
 import com.gloomyer.camera.camera.callback.ReadConfigCompileCallback;
 import com.gloomyer.camera.camera.camera.GCameraApi;
+import com.gloomyer.camera.camera.camera.impl2.callback.GCamera2CaptureCallback;
 import com.gloomyer.camera.camera.camera.impl2.callback.GCamera2OpenCallback;
 import com.gloomyer.camera.camera.camera.impl2.handler.GCamera2BackgroundHandler;
 import com.gloomyer.camera.camera.camera.impl2.info.GCamera2DeviceInfo;
+import com.gloomyer.camera.camera.config.GCameraConfig;
 import com.gloomyer.camera.camera.utils.LG;
 
+import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -55,6 +60,8 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
     private GCamera2OpenCallback mGCamera2OpenCallback;
     private GCamera2BackgroundHandler mBackgroundHandler;
     private GCamera2DeviceInfo currentGCamera2DeviceInfo;
+    private GCamera2CaptureCallback mGCamera2CaptureCallback;
+    private Surface mPreviewSurface;
 
     public GCamera2Impl(@NonNull Context ctx, @NonNull LifecycleOwner owner) {
         this.mContext = ctx;
@@ -91,13 +98,6 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
             Size previewSize = currentGCamera2DeviceInfo.getOptimalSize(w, h);
             mSurfaceTexture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
             try {
-                mGCamera2OpenCallback = new GCamera2OpenCallback(camera -> {
-                    mCameraDevice = camera;
-                    if (mCameraDevice != null) {
-                        setCameraPreview();
-                    }
-                });
-                mBackgroundHandler = new GCamera2BackgroundHandler();
                 mCameraManager.openCamera(currentGCamera2DeviceInfo.getCameraId(), mGCamera2OpenCallback, mBackgroundHandler.getHandler());
                 isOpenCamera = true;
             } catch (CameraAccessException e) {
@@ -105,6 +105,22 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
             }
         } else {
             error(-1, "初始化未完成!", null);
+        }
+    }
+
+    @Override
+    public String capture() {
+        File path = mContext.getExternalFilesDir(Environment.DIRECTORY_DCIM);
+        path = new File(path, System.currentTimeMillis() + GCameraConfig.DEFAULT_CAPTURE_IMAGE_END_WITH);
+        capture(path.getAbsolutePath());
+        return path.getAbsolutePath();
+    }
+
+    @Override
+    public void capture(String path) {
+        if (mCameraDevice != null
+                && mPreviewSurface != null) {
+          //TODO 拍照
         }
     }
 
@@ -145,16 +161,20 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         }
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-    void onPause(@NonNull LifecycleOwner owner) {
-        LG.e(TAG, "onPause");
-        if (mCameraDevice != null) {
-        }
-    }
-
     @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
     void onCreate(@NonNull LifecycleOwner owner) {
         LG.e(TAG, "onCreate");
+
+        mGCamera2OpenCallback = new GCamera2OpenCallback(camera -> {
+            mCameraDevice = camera;
+            if (mCameraDevice != null) {
+                setCameraPreview();
+            }
+        });
+
+        mBackgroundHandler = new GCamera2BackgroundHandler();
+        mGCamera2CaptureCallback = new GCamera2CaptureCallback();
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             mCameraManager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
             if (mCameraManager != null) {
@@ -174,6 +194,7 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         mReadConfigCompileCallback = null;
         mOnCameraErrorCallback = null;
         mBackgroundHandler = null;
+        mGCamera2CaptureCallback = null;
         if (mGCamera2OpenCallback != null)
             mGCamera2OpenCallback.onDestroy();
         mGCamera2OpenCallback = null;
@@ -193,9 +214,9 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         try {
             CaptureRequest.Builder mPreviewRequestBuilder =
                     mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            Surface surface = new Surface(mSurfaceTexture);
-            mPreviewRequestBuilder.addTarget(surface);
-            mCameraDevice.createCaptureSession(Arrays.asList(surface),
+            mPreviewSurface = new Surface(mSurfaceTexture);
+            mPreviewRequestBuilder.addTarget(mPreviewSurface);
+            mCameraDevice.createCaptureSession(Collections.singletonList(mPreviewSurface),
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {

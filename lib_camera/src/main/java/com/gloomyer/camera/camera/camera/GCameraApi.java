@@ -49,4 +49,15 @@ public interface GCameraApi {
     void open(LENS_FACING lensFacing,
               SurfaceTexture surface, int w, int h);
 
+    /**
+     * 捕捉图像（拍照)
+     */
+    String capture();
+
+    /**
+     * 捕捉图像（拍照)
+     *
+     * @param path 指定存储路径
+     */
+    void capture(String path);
 }

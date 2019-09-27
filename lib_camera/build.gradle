@@ -41,6 +41,7 @@ dependencies {
 
     api deps.rxjava
     api deps.rxandroid
+    api deps.rxbinding
     api deps.rxpermissions
 
     testImplementation deps.junit
