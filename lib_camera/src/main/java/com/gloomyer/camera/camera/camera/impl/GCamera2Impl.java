@@ -2,18 +2,12 @@ package com.gloomyer.camera.camera.camera.impl;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.params.Face;
-import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Build;
-import android.text.TextUtils;
-import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 
@@ -26,10 +20,13 @@ import androidx.lifecycle.OnLifecycleEvent;
 import com.gloomyer.camera.camera.callback.OnCameraErrorCallback;
 import com.gloomyer.camera.camera.callback.ReadConfigCompileCallback;
 import com.gloomyer.camera.camera.camera.GCameraApi;
+import com.gloomyer.camera.camera.camera.impl.callback.GCamera2OpenCallback;
+import com.gloomyer.camera.camera.camera.impl.handler.GCamera2BackgroundHandler;
+import com.gloomyer.camera.camera.camera.impl.info.GCamera2DeviceInfo;
 import com.gloomyer.camera.camera.utils.LG;
 
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.List;
 
 
 /**
@@ -39,15 +36,11 @@ import java.util.HashMap;
  * @Created by gloomy
  */
 @SuppressLint("NewApi")
-public class GCamera2Impl extends CameraDevice.StateCallback implements
-        GCameraApi,
-        LifecycleObserver {
+public class GCamera2Impl implements GCameraApi, LifecycleObserver {
 
     private Context mContext;
     private CameraManager mCameraManager;
 
-    private String mFrontCameraId;
-    private String mBackCameraId;
     private boolean isInitConfigComiple;
 
     private ReadConfigCompileCallback mReadConfigCompileCallback;
@@ -56,8 +49,10 @@ public class GCamera2Impl extends CameraDevice.StateCallback implements
     private boolean isOpenCamera; //是否成功的打开了摄像头
     private CameraDevice mCameraDevice; //当前摄像头对象
 
-    private HashMap<String, Boolean> availables; //闪光灯支持类标，key为摄像头id
     private Surface surface;
+    private List<GCamera2DeviceInfo> devices;
+    private GCamera2OpenCallback mGCamera2OpenCallback;
+    private GCamera2BackgroundHandler mBackgroundHandler;
 
     public GCamera2Impl(@NonNull Context ctx, @NonNull LifecycleOwner owner) {
         this.mContext = ctx;
@@ -89,9 +84,24 @@ public class GCamera2Impl extends CameraDevice.StateCallback implements
         }
         if (isInitConfigComiple) {
             //如果没有初始化完成不作数
-            String openId = lensFacing == LENS_FACING.LENS_FACING_BACK ? mBackCameraId : mFrontCameraId;
+            GCamera2DeviceInfo device = devices.get(0);
+            for (GCamera2DeviceInfo d : devices) {
+                if (lensFacing == LENS_FACING.LENS_FACING_BACK) {
+                    if (d.isBack()) {
+                        device = d;
+                        break;
+                    }
+                }
+            }
             try {
-                mCameraManager.openCamera(openId, this, null);
+                mGCamera2OpenCallback = new GCamera2OpenCallback(camera -> {
+                    mCameraDevice = camera;
+                    if (mCameraDevice != null) {
+                        setCameraPreview();
+                    }
+                });
+                mBackgroundHandler = new GCamera2BackgroundHandler();
+                mCameraManager.openCamera(device.getCameraId(), mGCamera2OpenCallback, mBackgroundHandler.getHandler());
                 isOpenCamera = true;
             } catch (CameraAccessException e) {
                 error(-1, "摄像头打开异常!", e);
@@ -113,55 +123,10 @@ public class GCamera2Impl extends CameraDevice.StateCallback implements
     @SuppressLint("NewApi")
     private void loadConfig() {
         try {
-            String[] cameraIdList = mCameraManager.getCameraIdList();
-            for (String cameraId : cameraIdList) {
-                availables.put(cameraId, false);
-                //摄像头详细
-                CameraCharacteristics info = mCameraManager.getCameraCharacteristics(cameraId);
-
-                //摄像头方向
-                Integer cameraOrientation = info.get(CameraCharacteristics.LENS_FACING);
-                if (cameraOrientation == null) continue;
-                if (cameraOrientation == CameraCharacteristics.LENS_FACING_FRONT) {
-                    mFrontCameraId = cameraId;
-                } else {
-                    mBackCameraId = cameraId;
-                }
-
-                //摄像头支持级别
-                Integer deviceLevel = info.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
-                if (deviceLevel == null) continue;
-
-                //屏幕方向
-                Integer sensorOrientation = info.get(CameraCharacteristics.SENSOR_ORIENTATION);
-                if (sensorOrientation == null) {
-                    sensorOrientation = 0;
-                }
-
-                //摄像机支持的尺寸列表
-                StreamConfigurationMap map = info.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                if (map == null) continue;
-                Size[] outputSizes = map.getOutputSizes(SurfaceTexture.class);
-
-                //fps
-                Range<Integer>[] fpsRanges = info.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
-
-                // 检查闪光灯是否支持。
-                Boolean available = info.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
-                if (available == null) available = false;
-                availables.put(cameraId, available);
-
-
-                LG.e(TAG, "cameraId:{0},cameraOrientation:{1},sensorOrientation:{2},outputSizes:{3},fpsRanges:{4}",
-                        cameraId,
-                        cameraOrientation,
-                        sensorOrientation,
-                        outputSizes,
-                        fpsRanges);
-                isInitConfigComiple = true;
-                if (mReadConfigCompileCallback != null) {
-                    mReadConfigCompileCallback.compile(this);
-                }
+            devices = new LoadConfig(mCameraManager).load();
+            isInitConfigComiple = true;
+            if (mReadConfigCompileCallback != null) {
+                mReadConfigCompileCallback.compile(this);
             }
         } catch (Exception e) {
             error(-1, "摄像头配置读取失败!", e);
@@ -169,10 +134,10 @@ public class GCamera2Impl extends CameraDevice.StateCallback implements
         }
     }
 
+
     @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
     void onCreate(@NonNull LifecycleOwner owner) {
         LG.e(TAG, "onCreate");
-        availables = new HashMap<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             mCameraManager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
             if (mCameraManager != null) {
@@ -189,33 +154,17 @@ public class GCamera2Impl extends CameraDevice.StateCallback implements
     @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
     void onDestroy(@NonNull LifecycleOwner owner) {
         LG.e(TAG, "onDestroy");
-        availables = null;
         mReadConfigCompileCallback = null;
         mOnCameraErrorCallback = null;
+        if (mGCamera2OpenCallback != null)
+            mGCamera2OpenCallback.onDestroy();
+        mGCamera2OpenCallback = null;
         owner.getLifecycle().removeObserver(this);
         if (isOpenCamera
                 && mCameraDevice != null) {
             mCameraDevice.close();
         }
         mCameraDevice = null;
-    }
-
-    @Override
-    public void onOpened(@NonNull CameraDevice camera) {
-        mCameraDevice = camera;
-        setCameraPreview();
-    }
-
-    @Override
-    public void onDisconnected(@NonNull CameraDevice camera) {
-        camera.close();
-        isOpenCamera = false;
-    }
-
-    @Override
-    public void onError(@NonNull CameraDevice camera, int error) {
-        camera.close();
-        isOpenCamera = false;
     }
 
 
