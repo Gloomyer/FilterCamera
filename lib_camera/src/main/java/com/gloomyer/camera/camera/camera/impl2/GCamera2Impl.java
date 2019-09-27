@@ -2,14 +2,20 @@ package com.gloomyer.camera.camera.camera.impl2;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
+import android.media.Image;
+import android.media.ImageReader;
+import android.media.ImageWriter;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 
@@ -19,10 +25,11 @@ import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.OnLifecycleEvent;
 
+import com.gloomyer.camera.camera.callback.OnActionCallback;
 import com.gloomyer.camera.camera.callback.OnCameraErrorCallback;
 import com.gloomyer.camera.camera.callback.ReadConfigCompileCallback;
 import com.gloomyer.camera.camera.camera.GCameraApi;
-import com.gloomyer.camera.camera.camera.impl2.callback.GCamera2CaptureCallback;
+import com.gloomyer.camera.camera.camera.impl2.callback.GCamera2PreviewCallback;
 import com.gloomyer.camera.camera.camera.impl2.callback.GCamera2OpenCallback;
 import com.gloomyer.camera.camera.camera.impl2.handler.GCamera2BackgroundHandler;
 import com.gloomyer.camera.camera.camera.impl2.info.GCamera2DeviceInfo;
@@ -30,6 +37,9 @@ import com.gloomyer.camera.camera.config.GCameraConfig;
 import com.gloomyer.camera.camera.utils.LG;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -60,8 +70,11 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
     private GCamera2OpenCallback mGCamera2OpenCallback;
     private GCamera2BackgroundHandler mBackgroundHandler;
     private GCamera2DeviceInfo currentGCamera2DeviceInfo;
-    private GCamera2CaptureCallback mGCamera2CaptureCallback;
+    private GCamera2PreviewCallback mGCamera2PreviewCallback;
     private Surface mPreviewSurface;
+    private Size previewSize;
+    private CameraCaptureSession mCameraSession;
+    private ImageReader mImageReader;
 
     public GCamera2Impl(@NonNull Context ctx, @NonNull LifecycleOwner owner) {
         this.mContext = ctx;
@@ -95,7 +108,7 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         //如果没有初始化完成不执行
         if (isInitConfigComiple) {
             currentGCamera2DeviceInfo = getDevice(lensFacing);
-            Size previewSize = currentGCamera2DeviceInfo.getOptimalSize(w, h);
+            previewSize = currentGCamera2DeviceInfo.getOptimalSize(w, h);
             mSurfaceTexture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
             try {
                 mCameraManager.openCamera(currentGCamera2DeviceInfo.getCameraId(), mGCamera2OpenCallback, mBackgroundHandler.getHandler());
@@ -120,7 +133,43 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
     public void capture(String path) {
         if (mCameraDevice != null
                 && mPreviewSurface != null) {
-          //TODO 拍照
+            try {
+                CaptureRequest.Builder captureBuilder =
+                        mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+
+                mImageReader.setOnImageAvailableListener(reader -> {
+                    Image image = reader.acquireNextImage();
+                    if (image != null) {
+                        LG.e(TAG, "ImageReader捕捉了一帧图像 在:{0}线程运行!", Thread.currentThread().getName());
+                        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                        byte[] data = new byte[buffer.remaining()];
+                        buffer.get(data);
+                        File mImageFile = new File(path);
+                        FileOutputStream fos = null;
+                        try {
+                            fos = new FileOutputStream(mImageFile);
+                            fos.write(data, 0, data.length);
+                            LG.e(TAG, "拍照成功！{0}", mImageFile.getAbsolutePath());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } finally {
+                            if (fos != null) {
+                                try {
+                                    fos.close();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                        image.close();
+                    }
+                }, mBackgroundHandler.getHandler());
+
+                captureBuilder.addTarget(mImageReader.getSurface());
+                mCameraSession.capture(captureBuilder.build(), null, mBackgroundHandler.getHandler());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -173,7 +222,7 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         });
 
         mBackgroundHandler = new GCamera2BackgroundHandler();
-        mGCamera2CaptureCallback = new GCamera2CaptureCallback();
+        mGCamera2PreviewCallback = new GCamera2PreviewCallback();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             mCameraManager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
@@ -194,7 +243,7 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
         mReadConfigCompileCallback = null;
         mOnCameraErrorCallback = null;
         mBackgroundHandler = null;
-        mGCamera2CaptureCallback = null;
+        mGCamera2PreviewCallback = null;
         if (mGCamera2OpenCallback != null)
             mGCamera2OpenCallback.onDestroy();
         mGCamera2OpenCallback = null;
@@ -212,39 +261,37 @@ public class GCamera2Impl implements GCameraApi, LifecycleObserver {
      */
     private void setCameraPreview() {
         try {
-            CaptureRequest.Builder mPreviewRequestBuilder =
+
+
+            //preview
+            CaptureRequest.Builder previewBuilder =
                     mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewSurface = new Surface(mSurfaceTexture);
-            mPreviewRequestBuilder.addTarget(mPreviewSurface);
-            mCameraDevice.createCaptureSession(Collections.singletonList(mPreviewSurface),
-                    new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession session) {
-                            // 相机已经关闭
-                            if (null == mCameraDevice) return;
-                            // 会话准备好后，我们开始显示预览
-                            CameraCaptureSession mCaptureSession = session;
-                            try {
-                                // 自动对焦应
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-                                // 闪光灯
-                                //setAutoFlash(mPreviewRequestBuilder);
-                                // 开启相机预览并添加事件
-                                CaptureRequest mPreviewRequest = mPreviewRequestBuilder.build();
-                                //发送请求
-                                mCaptureSession.setRepeatingRequest(mPreviewRequest,
-                                        null, null);
-                            } catch (CameraAccessException e) {
-                                e.printStackTrace();
-                            }
-                        }
+            previewBuilder.addTarget(mPreviewSurface);
+            mGCamera2PreviewCallback.setGCamera2PreviewCallback(session -> {
+                if (null == mCameraDevice) return;
+                if (session != null) {
+                    mCameraSession = session;
+                    try {
+                        LG.e(TAG, "session.isReprocessable():{0}", session.isReprocessable());
+                        session.setRepeatingRequest(previewBuilder.build(),
+                                null, mBackgroundHandler.getHandler());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }//else 说明走了失败
+            });
+            mImageReader = ImageReader.newInstance(
+                    previewSize.getWidth(),
+                    previewSize.getHeight(),
+                    ImageFormat.JPEG,
+                    2
+            );
+            mCameraDevice.createCaptureSession(Arrays.asList(mPreviewSurface, mImageReader.getSurface()),
+                    mGCamera2PreviewCallback,
+                    mBackgroundHandler.getHandler());
 
-                        @Override
-                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
 
-                        }
-                    }, mBackgroundHandler.getHandler());
         } catch (Exception e) {
             e.printStackTrace();
             error(-1, "摄像头预览失败！", e);
