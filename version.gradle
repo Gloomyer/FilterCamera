@@ -1,0 +1,151 @@
+ext {
+
+
+//    increasedVersionCode() {
+//        return (long) (System.currentTimeMillis() / 1000 / 60 / 60 / 24 - 17141)
+//    }
+
+    getVersionCodeTimeStamps = { ->
+        def date = new Date()
+        def formattedDate = date.format('yyMMddHHmm')
+        def result = formattedDate.toInteger()
+        return result
+    }
+
+    android = [
+            compileSdkVersion: 29,
+            buildToolsVersion: '29.0.2',
+            minSdkVersion    : 19,
+            targetSdkVersion : 29,
+            versionCode      : getVersionCodeTimeStamps(),
+            versionName      : "1.3.0",
+    ]
+
+    depsVersion = [
+            androidx_ver             : '1.1.0',
+            design_ver               : '1.0.0-rc01',
+            flexbox_ver              : '1.1.0',
+            lifecycle_ver            : '2.0.0',
+            glide_ver                : '4.8.0',
+            glide_transformations_ver: '4.0.1',
+            gson_ver                 : '2.8.5',
+            banner_ver               : '1.4.10',
+            rxpermissions_ver        : '0.10.2',
+            smart_refresh_layout_ver : '1.1.0',
+            picker_view_version      : '4.1.8',
+            kotlin_std_lib_ver       : '1.2.10',
+            paging_runtime_ver       : '2.0.0',
+            stetho_ver               : '1.5.0',
+            logging_interceptor_ver  : '3.8.0',
+            retrofit_ver             : '2.3.0',
+            rxandroid_ver            : '2.1.0',
+            rxbinding_ver            : '3.0.0',
+            bugly_ver                : 'latest.release',
+            multidex_ver             : '2.0.0',
+            eventbus_ver             : '3.1.1',
+            map_ver                  : 'latest.release',
+            filedownloader_ver       : '1.7.5',
+            qiyu_ver                 : '5.2.1',
+            sCardView_ver            : '1.2',
+            zxing_ver                : '3.3.0',
+            zxing_scanner_ver        : '3.5.0',
+            luban_ver                : '1.1.8',
+            qiniu_ver                : '7.3.15',
+            junit_ver                : '4.12',
+            test_runner_ver          : '1.2.0',
+            test_espresso_ver        : '3.2.0',
+    ]
+
+    deps = [
+            //google 的包
+            recyclerview            : 'androidx.recyclerview:recyclerview:' + depsVersion.androidx_ver,
+            appcompat_v4            : 'androidx.legacy:legacy-support-v4:' + depsVersion.androidx_ver,
+            appcompat_v7            : 'androidx.appcompat:appcompat:' + depsVersion.androidx_ver,
+            cardview_v7             : 'androidx.cardview:cardview:' + depsVersion.androidx_ver,
+            coordinatorlayout       : 'androidx.coordinatorlayout:coordinatorlayout:' + depsVersion.androidx_ver,
+            design                  : 'com.google.android.material:material:' + depsVersion.design_ver,
+            support_annotations     : 'androidx.annotation:annotation:' + depsVersion.androidx_ver,
+            flexbox                 : 'com.google.android:flexbox:' + depsVersion.flexbox_ver,
+            lifecycle_viewmodel     : 'androidx.lifecycle:lifecycle-viewmodel:' + depsVersion.lifecycle_ver,
+            lifecycle_runtime       : 'androidx.lifecycle:lifecycle-runtime:' + depsVersion.lifecycle_ver,
+            lifecycle_extensions    : 'androidx.lifecycle:lifecycle-extensions:' + depsVersion.lifecycle_ver,
+            lifecycle_livedata      : 'androidx.lifecycle:lifecycle-livedata:' + depsVersion.lifecycle_ver,
+            paging_runtime          : 'androidx.paging:paging-runtime:' + depsVersion.paging_runtime_ver,
+            multidex                : 'androidx.multidex:multidex:' + depsVersion.multidex_ver,
+
+
+            //test
+            junit                   : 'junit:junit:' + depsVersion.junit_ver,
+            test_runner             : 'androidx.test:runner:' + depsVersion.test_runner_ver,
+            test_espresso           : 'androidx.test.espresso:espresso-core:' + depsVersion.test_espresso_ver,
+
+            //kotlin
+            kotlin_std_lib          : 'org.jetbrains.kotlin:kotlin-stdlib-jre7:' + depsVersion.kotlin_std_lib_ver,
+
+            //glide 图片加载框架
+            glide                   : 'com.github.bumptech.glide:glide:' + depsVersion.glide_ver,
+            glide_compiler          : 'com.github.bumptech.glide:compiler:' + depsVersion.glide_ver,
+            glide_transformations   : 'jp.wasabeef:glide-transformations:' + depsVersion.glide_transformations_ver,
+
+            //gson
+            gson                    : 'com.google.code.gson:gson:' + depsVersion.gson_ver,
+
+            //banner
+            banner                  : 'com.youth.banner:banner:' + depsVersion.banner_ver,
+
+            //rxpermissions_ver
+            rxpermissions           : 'com.github.tbruyelle:rxpermissions:' + depsVersion.rxpermissions_ver,
+
+            //smart_refresh_layout_ver
+            smart_refresh_layout    : 'com.scwang.smartrefresh:SmartRefreshLayout:' + depsVersion.smart_refresh_layout_ver,
+
+            //pick view
+            picker_view             : 'com.contrarywind:Android-PickerView:' + depsVersion.picker_view_version,
+
+            //stetho
+            stetho                  : 'com.facebook.stetho:stetho:' + depsVersion.stetho_ver,
+            stetho_okhttp           : 'com.facebook.stetho:stetho-okhttp3:' + depsVersion.stetho_ver,
+
+            //网络库相关
+            retrofit                : 'com.squareup.retrofit2:retrofit:' + depsVersion.retrofit_ver,
+            retrofit_converter_gson : 'com.squareup.retrofit2:converter-gson:' + depsVersion.retrofit_ver,
+            retrofit_adapter_rxjava2: 'com.squareup.retrofit2:adapter-rxjava2:' + depsVersion.retrofit_ver,
+            logging_interceptor     : 'com.squareup.okhttp3:logging-interceptor:' + depsVersion.logging_interceptor_ver,
+
+            //rx
+            rxandroid               : 'io.reactivex.rxjava2:rxandroid:' + depsVersion.rxandroid_ver,
+            rxjava                  : 'io.reactivex.rxjava2:rxjava:' + depsVersion.rxandroid_ver,
+            rxbinding               : 'com.jakewharton.rxbinding3:rxbinding:' + depsVersion.rxbinding_ver,
+
+            //bugly
+            bugly_crashreport       : 'com.tencent.bugly:crashreport_upgrade:' + depsVersion.bugly_ver,
+            bugly_nativecrashreport : 'com.tencent.bugly:nativecrashreport:' + depsVersion.bugly_ver,
+
+            //eventbus
+            eventbus                : 'org.greenrobot:eventbus:' + depsVersion.eventbus_ver,
+
+            //map
+            map                     : 'com.amap.api:3dmap:' + depsVersion.map_ver,
+            map_location            : 'com.amap.api:location:' + depsVersion.map_ver,
+
+            //filedownloader
+            filedownloader          : 'com.liulishuo.filedownloader:library:' + depsVersion.filedownloader_ver,
+
+            //qiyu
+            qiyu                    : 'com.qiyukf.unicorn:unicorn:' + depsVersion.qiyu_ver,
+
+            // SCardView
+            sCardView               : 'io.github.meetsl:SCardView:' + depsVersion.sCardView_ver,
+
+            //zxing
+            zxing                   : 'com.google.zxing:core:' + depsVersion.zxing_ver,
+            zxing_scanner           : 'com.journeyapps:zxing-android-embedded:' + depsVersion.zxing_scanner_ver,
+
+            //luban
+            luban                   : 'top.zibin:Luban:' + depsVersion.luban_ver,
+
+            //qiniu
+            qiniu                   : 'com.qiniu:qiniu-android-sdk:' + depsVersion.qiniu_ver,
+    ]
+
+}
