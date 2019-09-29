@@ -47,8 +47,8 @@ public class CameraFragment extends Fragment implements ReadConfigCompileCallbac
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mTextureView = root.findViewById(R.id.texture_view);
-        mTextureView.setSurfaceTextureListener(this);
+        //mTextureView = root.findViewById(R.id.texture_view);
+        //mTextureView.setSurfaceTextureListener(this);
         ClickUtil.setClick(root.findViewById(R.id.iv_capture), this::capture);
     }
 
@@ -56,7 +56,7 @@ public class CameraFragment extends Fragment implements ReadConfigCompileCallbac
      * 拍照
      */
     private void capture() {
-        if(mGCameraApi!=null){
+        if (mGCameraApi != null) {
             mGCameraApi.capture();
         }
     }
@@ -83,6 +83,11 @@ public class CameraFragment extends Fragment implements ReadConfigCompileCallbac
                 });
     }
 
+    /**
+     * 摄像机准备完成回调
+     *
+     * @param cameraApi 摄像头操作API
+     */
     @Override
     public void compile(GCameraApi cameraApi) {
         cameraApi.open(GCameraApi.LENS_FACING.LENS_FACING_BACK,
