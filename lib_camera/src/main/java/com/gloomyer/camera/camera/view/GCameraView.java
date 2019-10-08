@@ -3,11 +3,13 @@ package com.gloomyer.camera.camera.view;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.pm.ConfigurationInfo;
+import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
 
 import com.gloomyer.camera.camera.utils.LG;
+import com.gloomyer.camera.camera.utils.GLUtils;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -20,8 +22,10 @@ import static android.content.Context.ACTIVITY_SERVICE;
  * @Date 2019-09-29 09:46
  * @Created by gloomy
  */
-public class GCameraView extends GLSurfaceView {
+public class GCameraView extends GLSurfaceView implements SurfaceTexture.OnFrameAvailableListener {
     private static final String TAG = GCameraView.class.getSimpleName();
+    private int mTextureId;
+    private SurfaceTexture mSurfaceTexture;
 
     public GCameraView(Context context) {
         super(context);
@@ -47,21 +51,28 @@ public class GCameraView extends GLSurfaceView {
         setRenderer(new Renderer() {
             @Override
             public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-                LG.e(TAG, "onSurfaceCreated:ThreadName:{0}", Thread.currentThread().getName());
-                gl.glClearColor(1.0f, 0.0f, 0.0f, 0.0f);//清空屏幕的颜色，本例为红色
+                mTextureId = GLUtils.getExternalOESTextureID();
+                mSurfaceTexture = new SurfaceTexture(mTextureId);
+                mSurfaceTexture.setOnFrameAvailableListener(GCameraView.this);
             }
 
             @Override
             public void onSurfaceChanged(GL10 gl, int width, int height) {
-                LG.e(TAG, "onSurfaceChanged:ThreadName:{0}", Thread.currentThread().getName());
                 gl.glViewport(0, 0, width, height);
             }
 
             @Override
             public void onDrawFrame(GL10 gl) {
-                LG.e(TAG, "onDrawFrame:ThreadName:{0}", Thread.currentThread().getName());
                 gl.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+                GLES20.glClearColor(0, 0, 0, 0);
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+                mSurfaceTexture.updateTexImage();
             }
         });
+    }
+
+    @Override
+    public void onFrameAvailable(SurfaceTexture surfaceTexture) {
+
     }
 }
